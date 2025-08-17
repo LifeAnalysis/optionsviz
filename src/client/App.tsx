@@ -93,8 +93,9 @@ function App() {
 
 
   useEffect(() => {
-    if (chartContainerRef.current) {
-      chart.current = createChart(chartContainerRef.current, {
+    if (!chartContainerRef.current) return;
+    
+    chart.current = createChart(chartContainerRef.current, {
         layout: {
           background: { type: ColorType.Solid, color: '#0a0b0f' },
           textColor: '#d1d4dc',
@@ -172,20 +173,26 @@ function App() {
 
       // Add volume series
       volumeSeries.current = chart.current.addHistogramSeries({
-        color: 'rgba(76, 175, 80, 0.3)',
+        color: 'rgba(76, 175, 80, 0.4)',
         priceFormat: {
-          type: 'volume',
+          type: 'custom',
+          formatter: (price: number) => {
+            if (price < 10) return price.toFixed(1);
+            if (price < 100) return price.toFixed(0);
+            return Math.round(price).toString();
+          },
         },
         priceScaleId: 'volume',
-        title: 'Volume',
+        title: 'Volume (Normalized)',
       });
 
       // Configure volume scale
       chart.current.priceScale('volume').applyOptions({
         scaleMargins: {
-          top: 0.7,
+          top: 0.8,  // Volume takes bottom 20% of chart
           bottom: 0,
         },
+        visible: false,  // Hide volume scale labels to avoid overlap
       });
 
       // Load OHLCV data and initialize chart
@@ -206,11 +213,21 @@ function App() {
             close: item.close
           }));
           
-          volumeData = ohlcvData.map((item: any) => ({
-            time: item.time,
-            value: item.volume,
-            color: item.close >= item.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
-          }));
+          // Normalize volume data for better display
+          const volumes = ohlcvData.map((item: any) => item.volume);
+          const maxVolume = Math.max(...volumes);
+          const minVolume = Math.min(...volumes);
+          const volumeRange = maxVolume - minVolume;
+          
+          volumeData = ohlcvData.map((item: any) => {
+            // Normalize volume to a reasonable scale (0-100)
+            const normalizedVolume = volumeRange > 0 ? ((item.volume - minVolume) / volumeRange) * 100 : 50;
+            return {
+              time: item.time,
+              value: Math.max(1, normalizedVolume), // Ensure minimum visible bar
+              color: item.close >= item.open ? 'rgba(38, 166, 154, 0.4)' : 'rgba(239, 83, 80, 0.4)'
+            };
+          });
         } else {
           // Fallback: Generate realistic OHLC data
           const generateCandleData = (time: string, basePrice: number, index: number) => {
@@ -273,11 +290,22 @@ function App() {
           ];
           
           candlestickData = fallbackData;
-          volumeData = fallbackData.map(candle => ({
-            time: candle.time,
-            value: candle.volume,
-            color: candle.close >= candle.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
-          }));
+          
+          // Normalize fallback volume data too
+          const fallbackVolumes = fallbackData.map(candle => candle.volume);
+          const maxFallbackVolume = Math.max(...fallbackVolumes);
+          const minFallbackVolume = Math.min(...fallbackVolumes);
+          const fallbackVolumeRange = maxFallbackVolume - minFallbackVolume;
+          
+          volumeData = fallbackData.map(candle => {
+            const normalizedVolume = fallbackVolumeRange > 0 ? 
+              ((candle.volume - minFallbackVolume) / fallbackVolumeRange) * 100 : 50;
+            return {
+              time: candle.time,
+              value: Math.max(1, normalizedVolume),
+              color: candle.close >= candle.open ? 'rgba(38, 166, 154, 0.4)' : 'rgba(239, 83, 80, 0.4)'
+            };
+          });
         }
 
         // Set candlestick data
@@ -326,7 +354,6 @@ function App() {
           chart.current.remove();
         }
       };
-    }
   }, [showVolume]);
 
   useEffect(() => {
