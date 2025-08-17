@@ -26,7 +26,10 @@ function App() {
 
   const loadOHLCVData = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/ohlcv-data');
+      const API_BASE = import.meta.env.PROD 
+        ? 'https://optionsviz-backend.vercel.app' 
+        : 'http://localhost:8000';
+      const response = await fetch(`${API_BASE}/api/ohlcv-data`);
       const result = await response.json();
       setDataSource('api');
       console.log('✅ Loaded real OHLCV data from backend:', result.data.length, 'candles');
