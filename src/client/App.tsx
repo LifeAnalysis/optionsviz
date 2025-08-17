@@ -173,26 +173,36 @@ function App() {
 
       // Add volume series
       volumeSeries.current = chart.current.addHistogramSeries({
-        color: 'rgba(76, 175, 80, 0.4)',
+        color: 'rgba(76, 175, 80, 0.6)',
         priceFormat: {
           type: 'custom',
           formatter: (price: number) => {
-            if (price < 10) return price.toFixed(1);
-            if (price < 100) return price.toFixed(0);
-            return Math.round(price).toString();
+            // Show volume in M (millions) or K (thousands) format
+            if (price >= 1000000) {
+              return (price / 1000000).toFixed(1) + 'M';
+            } else if (price >= 1000) {
+              return (price / 1000).toFixed(0) + 'K';
+            } else {
+              return price.toFixed(0);
+            }
           },
         },
         priceScaleId: 'volume',
-        title: 'Volume (Normalized)',
+        title: 'Volume',
       });
 
       // Configure volume scale
       chart.current.priceScale('volume').applyOptions({
         scaleMargins: {
-          top: 0.8,  // Volume takes bottom 20% of chart
+          top: 0.75,  // Volume takes bottom 25% of chart
           bottom: 0,
         },
-        visible: false,  // Hide volume scale labels to avoid overlap
+        visible: true,  // Show volume scale labels
+        borderColor: '#2a2e39',
+        textColor: '#858ca2',
+        entireTextOnly: false,
+        ticksVisible: true,
+        alignLabels: true,
       });
 
       // Load OHLCV data and initialize chart
@@ -213,19 +223,40 @@ function App() {
             close: item.close
           }));
           
-          // Normalize volume data for better display
+          // Process volume data with better scaling and colors
           const volumes = ohlcvData.map((item: any) => item.volume);
           const maxVolume = Math.max(...volumes);
           const minVolume = Math.min(...volumes);
-          const volumeRange = maxVolume - minVolume;
+          const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+          
+          console.log('📊 Volume Statistics:', {
+            max: `${(maxVolume / 1000000).toFixed(1)}M`,
+            min: `${(minVolume / 1000000).toFixed(1)}M`,
+            avg: `${(avgVolume / 1000000).toFixed(1)}M`,
+            samples: volumes.length
+          });
           
           volumeData = ohlcvData.map((item: any) => {
-            // Normalize volume to a reasonable scale (0-100)
-            const normalizedVolume = volumeRange > 0 ? ((item.volume - minVolume) / volumeRange) * 100 : 50;
+            const isUpDay = item.close >= item.open;
+            const volumeRatio = item.volume / avgVolume; // Compare to average volume
+            
+            // Enhanced color coding based on volume and price action
+            let color;
+            if (volumeRatio > 1.5) {
+              // High volume - more intense colors
+              color = isUpDay ? 'rgba(38, 166, 154, 0.8)' : 'rgba(239, 83, 80, 0.8)';
+            } else if (volumeRatio > 0.7) {
+              // Normal volume
+              color = isUpDay ? 'rgba(38, 166, 154, 0.6)' : 'rgba(239, 83, 80, 0.6)';
+            } else {
+              // Low volume - muted colors
+              color = isUpDay ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)';
+            }
+            
             return {
               time: item.time,
-              value: Math.max(1, normalizedVolume), // Ensure minimum visible bar
-              color: item.close >= item.open ? 'rgba(38, 166, 154, 0.4)' : 'rgba(239, 83, 80, 0.4)'
+              value: item.volume, // Use actual volume values
+              color: color
             };
           });
         } else {
@@ -291,19 +322,28 @@ function App() {
           
           candlestickData = fallbackData;
           
-          // Normalize fallback volume data too
+          // Process fallback volume data with enhanced visualization
           const fallbackVolumes = fallbackData.map(candle => candle.volume);
-          const maxFallbackVolume = Math.max(...fallbackVolumes);
-          const minFallbackVolume = Math.min(...fallbackVolumes);
-          const fallbackVolumeRange = maxFallbackVolume - minFallbackVolume;
+          const avgFallbackVolume = fallbackVolumes.reduce((sum, vol) => sum + vol, 0) / fallbackVolumes.length;
           
           volumeData = fallbackData.map(candle => {
-            const normalizedVolume = fallbackVolumeRange > 0 ? 
-              ((candle.volume - minFallbackVolume) / fallbackVolumeRange) * 100 : 50;
+            const isUpDay = candle.close >= candle.open;
+            const volumeRatio = candle.volume / avgFallbackVolume;
+            
+            // Enhanced color coding for fallback data too
+            let color;
+            if (volumeRatio > 1.5) {
+              color = isUpDay ? 'rgba(38, 166, 154, 0.8)' : 'rgba(239, 83, 80, 0.8)';
+            } else if (volumeRatio > 0.7) {
+              color = isUpDay ? 'rgba(38, 166, 154, 0.6)' : 'rgba(239, 83, 80, 0.6)';
+            } else {
+              color = isUpDay ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)';
+            }
+            
             return {
               time: candle.time,
-              value: Math.max(1, normalizedVolume),
-              color: candle.close >= candle.open ? 'rgba(38, 166, 154, 0.4)' : 'rgba(239, 83, 80, 0.4)'
+              value: candle.volume, // Use actual volume values
+              color: color
             };
           });
         }
