@@ -1,6 +1,6 @@
 import sqlite3, { Database } from 'sqlite3';
 import { promisify } from 'util';
-import { OptionEntry, OptionResponse, OptionDBRow } from '../types';
+import { OptionEntry, OptionResponse, OptionDBRow } from '../../shared/types/index.js';
 
 export class OptionsDatabase {
   private db: Database;

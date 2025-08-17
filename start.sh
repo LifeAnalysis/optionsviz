@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting Options Visualization Tool (TypeScript Stack)..."
+echo "🚀 Starting Options Visualization Tool (Unified TypeScript Stack)..."
 
 # Check if Node.js is available
 if ! command -v node &> /dev/null; then
@@ -19,21 +19,21 @@ fi
 
 echo "✅ Node.js $(node -v) detected"
 
-# Install all dependencies if needed
-if [ ! -d "node_modules" ] || [ ! -d "backend/node_modules" ] || [ ! -d "frontend/node_modules" ]; then
-    echo "📦 Installing all dependencies..."
-    npm run install:all
+# Install dependencies if needed
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing dependencies..."
+    npm install
 fi
 
-# Build backend TypeScript
-echo "🔨 Building TypeScript backend..."
-npm run backend:build
+# Build server TypeScript
+echo "🔨 Building TypeScript server..."
+npm run server:build
 
 echo "🎯 Starting development servers..."
-echo "📊 Backend will be available at: http://localhost:8000"
-echo "🎨 Frontend will be available at: http://localhost:5173"
+echo "📊 Server will be available at: http://localhost:8000"
+echo "🎨 Client will be available at: http://localhost:5173"
 echo ""
-echo "⚡ Running 'npm run dev' - this starts both servers!"
+echo "⚡ Running 'npm run dev' - this starts both client and server!"
 
-# Start both backend and frontend in development mode
+# Start both client and server in development mode
 npm run dev

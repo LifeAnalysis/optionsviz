@@ -1,4 +1,4 @@
-import { RawOHLCVEntry } from '../types';
+import { RawOHLCVEntry } from '../../shared/types/index.js';
 
 /**
  * Historical OHLCV data from CoinGecko (FET/USD - Jan 1, 2023 to Aug 16, 2025)

@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { OptionEntry, OHLCVResponse, CreateOptionResponse } from './types';
-import { optionsDB } from './database';
-import { formatOHLCVDataForChart, FET_OHLCV_DATA } from './data/ohlcv-data';
+import { OptionEntry, OHLCVResponse, CreateOptionResponse } from '../shared/types/index.js';
+import { optionsDB } from './database/index.js';
+import { formatOHLCVDataForChart, FET_OHLCV_DATA } from './data/ohlcv-data.js';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
