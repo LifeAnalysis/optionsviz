@@ -66,3 +66,11 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# TypeScript build artifacts (auto-generated from .ts files)
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+src/**/*.d.ts.map
+# Keep Vite config
+!vite.config.ts

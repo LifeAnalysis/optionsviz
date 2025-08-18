@@ -6,13 +6,16 @@
   "main": "dist/server/server.js",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "dev:frontend": "vite",
     "client:dev": "vite",
     "client:build": "vite build",
     "client:preview": "vite preview",
     "server:dev": "tsx watch src/server/server.ts",
     "server:build": "tsc --project tsconfig.server.json",
     "build": "npm run server:build && npm run client:build",
+    "build:frontend": "vite build",
     "start": "node dist/server/server.js",
+    "start:frontend": "vite preview --port 3000",
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
     "install:all": "npm install"

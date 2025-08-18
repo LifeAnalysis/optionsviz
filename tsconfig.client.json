@@ -5,8 +5,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client"]
   },
-  "include": ["src/client/**/*", "src/shared/**/*"],
+  "include": ["src/client/**/*", "src/shared/**/*", "vite.config.ts"],
   "exclude": ["src/server/**/*"]
 }
