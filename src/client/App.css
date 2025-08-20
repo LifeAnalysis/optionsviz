@@ -1,3 +1,6 @@
+/* Import symbiotic fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
 .app {
   width: 100%;
   height: 100vh;
@@ -31,15 +34,19 @@
 }
 
 .symbol {
+  font-family: 'Orbitron', monospace;
   font-weight: 600;
   font-size: 1.1rem;
   color: #26a69a;
+  letter-spacing: 1px;
 }
 
 .price {
+  font-family: 'Orbitron', monospace;
   font-weight: 700;
   font-size: 1.2rem;
   color: #ffffff;
+  letter-spacing: 0.5px;
 }
 
 .change {
@@ -62,8 +69,10 @@
 .app-header h1 {
   margin: 0;
   color: white;
+  font-family: 'Orbitron', monospace;
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .add-option-btn {
@@ -138,6 +147,13 @@
   color: #26a69a;
   border-color: #26a69a;
   background-color: rgba(38, 166, 154, 0.1);
+}
+
+.control-separator {
+  width: 1px;
+  height: 24px;
+  background-color: #2a2e39;
+  margin: 0 0.5rem;
 }
 
 .legend-info {
@@ -232,9 +248,11 @@
 .portfolio-summary h3 {
   margin: 0 0 0.75rem 0;
   color: white;
+  font-family: 'Orbitron', monospace;
   font-size: 1rem;
   font-weight: 700;
   text-align: center;
+  letter-spacing: 0.5px;
   background: linear-gradient(135deg, #26a69a, #00bfa5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -266,9 +284,11 @@
 }
 
 .stat-value {
+  font-family: 'Orbitron', monospace;
   font-size: 1.1rem;
   font-weight: 700;
   color: #ffffff;
+  letter-spacing: 0.5px;
 }
 
 .stat-value.call {
@@ -386,7 +406,9 @@
 
 .option-details span:first-child {
   color: #ffffff;
+  font-family: 'Orbitron', monospace;
   font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .option-status {
@@ -525,8 +547,8 @@
   background: linear-gradient(145deg, #1a1d29 0%, #1e222d 100%);
   border-radius: 16px;
   padding: 2rem;
-  max-width: 500px;
-  width: 90%;
+  max-width: 600px;
+  width: 95%;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -556,9 +578,11 @@
 
 .modal-title {
   margin: 0;
+  font-family: 'Orbitron', monospace;
   font-size: 1.5rem;
   font-weight: 700;
   color: #ffffff;
+  letter-spacing: 0.5px;
   background: linear-gradient(135deg, #26a69a, #00bfa5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -756,4 +780,291 @@
 .clear-all-btn:active {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+}
+
+/* Error Boundary Styles */
+.error-boundary {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0a0b0f;
+  padding: 2rem;
+}
+
+.error-boundary-content {
+  text-align: center;
+  max-width: 600px;
+  background: linear-gradient(145deg, #1a1d29 0%, #1e222d 100%);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  border: 1px solid #2a2e39;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.error-boundary-content h2 {
+  color: #ef5350;
+  font-size: 2rem;
+  margin: 0 0 1rem 0;
+  font-weight: 700;
+}
+
+.error-boundary-content p {
+  color: #d1d4dc;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0 0 2rem 0;
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.error-details {
+  text-align: left;
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: #2a2e39;
+  border-radius: 8px;
+  border: 1px solid #3a3e49;
+}
+
+.error-details summary {
+  color: #26a69a;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.error-stack {
+  color: #ef5350;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+/* Enhanced Option Form Styles */
+.option-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.section-label {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #d1d4dc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+/* Toggle Group for Option Type */
+.toggle-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid #2a2e39;
+  background: #1a1d29;
+  color: #9ca3af;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.toggle-btn:hover {
+  border-color: #3a3e49;
+  background: #232630;
+}
+
+.toggle-btn.active {
+  border-color: #26a69a;
+  background: rgba(38, 166, 154, 0.1);
+  color: #26a69a;
+}
+
+.toggle-btn.active.call {
+  border-color: #26a69a;
+  background: rgba(38, 166, 154, 0.15);
+  color: #26a69a;
+}
+
+.toggle-btn.active.put {
+  border-color: #ef5350;
+  background: rgba(239, 83, 80, 0.15);
+  color: #ef5350;
+}
+
+/* Preset Button Grids */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.size-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.preset-btn {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #2a2e39;
+  background: #1a1d29;
+  color: #9ca3af;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.preset-btn:hover {
+  border-color: #3a3e49;
+  background: #232630;
+  color: #d1d4dc;
+}
+
+.preset-btn.active {
+  border-color: #26a69a;
+  background: rgba(38, 166, 154, 0.1);
+  color: #26a69a;
+  font-weight: 600;
+}
+
+.size-btn {
+  font-weight: 600;
+}
+
+.size-btn.active {
+  background: rgba(38, 166, 154, 0.15);
+}
+
+/* Custom Input Fields */
+.custom-input {
+  padding: 0.75rem;
+  border: 1px solid #2a2e39;
+  background: #1a1d29;
+  color: #d1d4dc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.custom-input:focus {
+  outline: none;
+  border-color: #26a69a;
+  background: #1e222d;
+  box-shadow: 0 0 0 3px rgba(38, 166, 154, 0.1);
+}
+
+.custom-input::placeholder {
+  color: #6b7280;
+}
+
+/* Custom Size Input with Suffix */
+.custom-size-input {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.custom-size-input .custom-input {
+  flex: 1;
+}
+
+.input-suffix {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Error Messages */
+.error-message {
+  color: #ef5350;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+/* Button Group */
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2e39;
+}
+
+.button {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.button-secondary {
+  background: #2a2e39;
+  color: #9ca3af;
+  border: 1px solid #3a3e49;
+}
+
+.button-secondary:hover {
+  background: #3a3e49;
+  color: #d1d4dc;
+}
+
+.button-primary {
+  background: linear-gradient(135deg, #26a69a, #00bfa5);
+  color: white;
+  box-shadow: 0 4px 12px rgba(38, 166, 154, 0.3);
+}
+
+.button-primary:hover {
+  background: linear-gradient(135deg, #00bfa5, #1de9b6);
+  box-shadow: 0 6px 16px rgba(38, 166, 154, 0.4);
+  transform: translateY(-1px);
+}
+
+.button-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(38, 166, 154, 0.3);
 }

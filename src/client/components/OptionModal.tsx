@@ -15,10 +15,33 @@ const OptionModal: React.FC<OptionModalProps> = ({ onClose, onSubmit }) => {
     option_type: 'call' as 'call' | 'put',
     strike_price: '',
     expiry_date: '',
-    size: '',
+    size: 1000000, // Default to 1M FET
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Quick preset options
+  const strikePresets = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0];
+  const sizePresets = [
+    { label: '1M', value: 1000000 },
+    { label: '2M', value: 2000000 },
+    { label: '5M', value: 5000000 },
+    { label: '10M', value: 10000000 },
+    { label: '25M', value: 25000000 },
+    { label: '50M', value: 50000000 },
+  ];
+  const expiryPresets = [
+    { label: '1 Month', months: 1 },
+    { label: '3 Months', months: 3 },
+    { label: '6 Months', months: 6 },
+    { label: '1 Year', months: 12 },
+  ];
+
+  const getPresetDate = (months: number) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + months);
+    return date.toISOString().split('T')[0];
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -36,6 +59,7 @@ const OptionModal: React.FC<OptionModalProps> = ({ onClose, onSubmit }) => {
     } else {
       const expiryDate = new Date(formData.expiry_date);
       const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to start of day for fair comparison
       if (expiryDate <= today) {
         newErrors.expiry_date = 'Expiry date must be in the future';
       }
@@ -62,7 +86,7 @@ const OptionModal: React.FC<OptionModalProps> = ({ onClose, onSubmit }) => {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -86,62 +110,113 @@ const OptionModal: React.FC<OptionModalProps> = ({ onClose, onSubmit }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Option Type</label>
-            <select
-              className="form-select"
-              value={formData.option_type}
-              onChange={(e) => handleInputChange('option_type', e.target.value)}
-            >
-              <option value="call">Call</option>
-              <option value="put">Put</option>
-            </select>
+        <form onSubmit={handleSubmit} className="option-form">
+          {/* Option Type - Toggle Buttons */}
+          <div className="form-section">
+            <label className="section-label">Option Type</label>
+            <div className="toggle-group">
+              <button
+                type="button"
+                className={`toggle-btn ${formData.option_type === 'call' ? 'active call' : ''}`}
+                onClick={() => handleInputChange('option_type', 'call')}
+              >
+                📈 Call
+              </button>
+              <button
+                type="button"
+                className={`toggle-btn ${formData.option_type === 'put' ? 'active put' : ''}`}
+                onClick={() => handleInputChange('option_type', 'put')}
+              >
+                📉 Put
+              </button>
+            </div>
             {errors.option_type && (
               <div className="error-message">{errors.option_type}</div>
             )}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Strike Price (USDT)</label>
+          {/* Strike Price - Preset Buttons + Custom Input */}
+          <div className="form-section">
+            <label className="section-label">Strike Price (USDT)</label>
+            <div className="preset-grid">
+              {strikePresets.map(price => (
+                <button
+                  key={price}
+                  type="button"
+                  className={`preset-btn ${formData.strike_price === price.toString() ? 'active' : ''}`}
+                  onClick={() => handleInputChange('strike_price', price.toString())}
+                >
+                  ${price}
+                </button>
+              ))}
+            </div>
             <input
               type="number"
               step="0.01"
-              className="form-input"
+              className="custom-input"
               value={formData.strike_price}
               onChange={(e) => handleInputChange('strike_price', e.target.value)}
-              placeholder="e.g., 0.50"
+              placeholder="Custom price"
             />
             {errors.strike_price && (
               <div className="error-message">{errors.strike_price}</div>
             )}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Expiry Date</label>
+          {/* Position Size - Million Scale Presets */}
+          <div className="form-section">
+            <label className="section-label">Position Size</label>
+            <div className="preset-grid size-grid">
+              {sizePresets.map(({ label, value }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`preset-btn size-btn ${formData.size === value ? 'active' : ''}`}
+                  onClick={() => handleInputChange('size', value)}
+                >
+                  {label} FET
+                </button>
+              ))}
+            </div>
+            <div className="custom-size-input">
+              <input
+                type="number"
+                className="custom-input"
+                value={formData.size}
+                onChange={(e) => handleInputChange('size', Number(e.target.value))}
+                placeholder="Custom size"
+              />
+              <span className="input-suffix">FET ({(Number(formData.size) / 1000000).toFixed(1)}M)</span>
+            </div>
+            {errors.size && (
+              <div className="error-message">{errors.size}</div>
+            )}
+          </div>
+
+          {/* Expiry Date - Quick Presets + Date Picker */}
+          <div className="form-section">
+            <label className="section-label">Expiry Date</label>
+            <div className="preset-grid">
+              {expiryPresets.map(({ label, months }) => (
+                <button
+                  key={months}
+                  type="button"
+                  className={`preset-btn ${formData.expiry_date === getPresetDate(months) ? 'active' : ''}`}
+                  onClick={() => handleInputChange('expiry_date', getPresetDate(months))}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <input
               type="date"
-              className="form-input"
+              className="custom-input"
               value={formData.expiry_date}
               onChange={(e) => handleInputChange('expiry_date', e.target.value)}
               min={new Date().toISOString().split('T')[0]}
             />
             {errors.expiry_date && (
               <div className="error-message">{errors.expiry_date}</div>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Size (FET)</label>
-            <input
-              type="number"
-              className="form-input"
-              value={formData.size}
-              onChange={(e) => handleInputChange('size', e.target.value)}
-              placeholder="e.g., 1000000"
-            />
-            {errors.size && (
-              <div className="error-message">{errors.size}</div>
             )}
           </div>
 

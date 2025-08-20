@@ -27,6 +27,29 @@ export class OptionsDatabase {
 
   async addOption(option: OptionEntry): Promise<number> {
     return new Promise((resolve, reject) => {
+      // Enhanced validation before database insertion
+      if (!option.option_type || !['call', 'put'].includes(option.option_type)) {
+        reject(new Error('Invalid option type'));
+        return;
+      }
+      
+      if (typeof option.strike_price !== 'number' || option.strike_price <= 0) {
+        reject(new Error('Invalid strike price'));
+        return;
+      }
+      
+      if (typeof option.size !== 'number' || option.size <= 0) {
+        reject(new Error('Invalid option size'));
+        return;
+      }
+      
+      // Validate date format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(option.expiry_date)) {
+        reject(new Error('Invalid date format'));
+        return;
+      }
+      
       const stmt = this.db.prepare(`
         INSERT INTO options (option_type, strike_price, expiry_date, size)
         VALUES (?, ?, ?, ?)
@@ -36,6 +59,7 @@ export class OptionsDatabase {
         [option.option_type, option.strike_price, option.expiry_date, option.size],
         function(this: sqlite3.RunResult, err: Error | null) {
           if (err) {
+            console.error('Database insertion error:', err);
             reject(err);
           } else {
             resolve(this.lastID);
@@ -43,7 +67,11 @@ export class OptionsDatabase {
         }
       );
       
-      stmt.finalize();
+      stmt.finalize((err) => {
+        if (err) {
+          console.error('Statement finalization error:', err);
+        }
+      });
     });
   }
 
@@ -72,11 +100,18 @@ export class OptionsDatabase {
 
   async deleteOption(optionId: number): Promise<boolean> {
     return new Promise((resolve, reject) => {
+      // Validate input
+      if (!Number.isInteger(optionId) || optionId <= 0) {
+        reject(new Error('Invalid option ID'));
+        return;
+      }
+      
       this.db.run(
         'DELETE FROM options WHERE id = ?',
         [optionId],
         function(this: sqlite3.RunResult, err: Error | null) {
           if (err) {
+            console.error('Database deletion error:', err);
             reject(err);
           } else {
             resolve(this.changes > 0);

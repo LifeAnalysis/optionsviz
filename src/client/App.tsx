@@ -1,30 +1,47 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createChart, ColorType, CrosshairMode, LineStyle } from 'lightweight-charts';
 import OptionModal from './components/OptionModal';
-import { formatOHLCVDataForChart } from '../server/data/ohlcv-data';
+import { formatOHLCVDataForChart } from '../shared/data/ohlcv-data';
 import './App.css';
 
 interface Option {
-  id?: number;
+  id: number; // Made required to prevent undefined issues
   option_type: 'call' | 'put';
   strike_price: number;
   expiry_date: string;
   size: number;
-  created_at?: string;
+  created_at: string; // Made required for consistency
 }
 
 function App() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chart = useRef<any>(null);
   const candlestickSeries = useRef<any>(null);
-  const volumeSeries = useRef<any>(null);
-  const optionsSeries = useRef<any>(null);
+  // const volumeSeries = useRef<any>(null);
+  const strikeLinesRef = useRef<any[]>([]);
+  // const payoffSeriesRef = useRef<any>(null);
+  const timeExtensionSeriesRef = useRef<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [options, setOptions] = useState<Option[]>([]);
-  const [chartType, setChartType] = useState<'candlestick' | 'line'>('candlestick');
-  const [showVolume, setShowVolume] = useState(true);
+  // const [chartType, setChartType] = useState<'candlestick' | 'line'>('candlestick');
+  // const [showVolume, setShowVolume] = useState(true);
+  // Options always shown - no need for display mode toggle
 
   const [dataSource, setDataSource] = useState<'loading' | 'api' | 'fallback'>('loading');
+  
+  // Memoize expensive calculations
+  const optionStats = React.useMemo(() => {
+    const totalSize = options.reduce((sum, opt) => sum + opt.size, 0);
+    const callCount = options.filter(opt => opt.option_type === 'call').length;
+    const putCount = options.filter(opt => opt.option_type === 'put').length;
+    
+    return {
+      totalOptions: options.length,
+      totalSize: (totalSize / 1000000).toFixed(1),
+      callCount,
+      putCount
+    };
+  }, [options]);
 
   const loadOHLCVData = async () => {
     try {
@@ -167,63 +184,45 @@ function App() {
         title: 'FET/USDT',
       });
 
-      // Add volume series (hide last-value tag and price line)
-      volumeSeries.current = chart.current.addHistogramSeries({
-        color: 'rgba(76, 175, 80, 0.6)',
-        priceFormat: {
-          type: 'custom',
-          formatter: (price: number) => {
-            if (price >= 1000000) return (price / 1000000).toFixed(1) + 'M';
-            if (price >= 1000) return (price / 1000).toFixed(0) + 'K';
-            return price.toFixed(0);
-          },
-        },
-        priceScaleId: 'volume',
-        lastValueVisible: false,
-        priceLineVisible: false,
-      });
+      // Volume series disabled
+      // volumeSeries.current = chart.current.addHistogramSeries({
+      //   color: 'rgba(76, 175, 80, 0.6)',
+      //   priceFormat: {
+      //     type: 'custom',
+      //     formatter: (price: number) => {
+      //       if (price >= 1000000) return (price / 1000000).toFixed(1) + 'M';
+      //       if (price >= 1000) return (price / 1000).toFixed(0) + 'K';
+      //       return price.toFixed(0);
+      //     },
+      //   },
+      //   priceScaleId: 'volume',
+      //   lastValueVisible: false,
+      //   priceLineVisible: false,
+      // });
 
-      // Configure volume scale
-      chart.current.priceScale('volume').applyOptions({
-        scaleMargins: {
-          top: 0.82,
-          bottom: 0,
-        },
-        visible: true,
-        borderColor: '#2a2e39',
-        textColor: '#858ca2',
-        entireTextOnly: false,
-        ticksVisible: true,
-        alignLabels: true,
-      });
+      // // Configure volume scale
+      // chart.current.priceScale('volume').applyOptions({
+      //   scaleMargins: {
+      //     top: 0.82,
+      //     bottom: 0,
+      //   },
+      //   visible: true,
+      //   borderColor: '#2a2e39',
+      //   textColor: '#858ca2',
+      //   entireTextOnly: false,
+      //   ticksVisible: true,
+      //   alignLabels: true,
+      // });
 
-      // Create a hidden line series just for extending the time scale
-      console.log('🎨 Creating options series with custom price scale...');
-      optionsSeries.current = chart.current.addLineSeries({
-        color: 'transparent',
-        lineWidth: 0,
-        crosshairMarkerVisible: false,
-        lastValueVisible: false,
-        priceLineVisible: false,
-        visible: true, // keep series visible so markers render
-        priceScaleId: 'options'
-      });
-
-      // Hide options price scale entirely
-      console.log('⚙️ Configuring options price scale to be hidden...');
-      chart.current.priceScale('options').applyOptions({
-        visible: false,
-        scaleMargins: { top: 0.82, bottom: 0 }
-      });
-      
-      console.log('✅ Options series created successfully');
+      // No need for separate options series - markers will be placed on candlestick series
+      console.log('✅ Chart series setup complete');
 
       // Load OHLCV data and initialize chart
       const initializeChart = async () => {
         const ohlcvData = await loadOHLCVData();
         
         let candlestickData;
-        let volumeData;
+        // let volumeData;
         
         // Helper: percentile (e.g., 0.95 for 95th)
         const percentile = (arr: number[], p: number) => {
@@ -243,33 +242,33 @@ function App() {
             close: item.close
           }));
           
-          // Process volume data with scaling and colors
-          const volumes = ohlcvData.map((item: any) => item.volume);
-          const maxVolume = Math.max(...volumes);
-          const minVolume = Math.min(...volumes);
-          const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
-          const capVolume = percentile(volumes, 0.95);
-          
-          console.log('📊 Volume Statistics:', {
-            max: `${(maxVolume / 1000000).toFixed(1)}M`,
-            min: `${(minVolume / 1000000).toFixed(1)}M`,
-            avg: `${(avgVolume / 1000000).toFixed(1)}M`,
-            cap95: `${(capVolume / 1000000).toFixed(1)}M`,
-            samples: volumes.length
-          });
-          
-          volumeData = ohlcvData.map((item: any) => {
-            const isUpDay = item.close >= item.open;
-            const volumeRatio = item.volume / avgVolume;
-            
-            let color;
-            if (volumeRatio > 1.5) color = isUpDay ? 'rgba(38, 166, 154, 0.8)' : 'rgba(239, 83, 80, 0.8)';
-            else if (volumeRatio > 0.7) color = isUpDay ? 'rgba(38, 166, 154, 0.6)' : 'rgba(239, 83, 80, 0.6)';
-            else color = isUpDay ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)';
-            
-            const renderValue = Math.min(item.volume, capVolume);
-            return { time: item.time, value: renderValue, color };
-          });
+          // Volume processing disabled
+          // const volumes = ohlcvData.map((item: any) => item.volume);
+          // const maxVolume = Math.max(...volumes);
+          // const minVolume = Math.min(...volumes);
+          // const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+          // const capVolume = percentile(volumes, 0.95);
+          // 
+          // console.log('📊 Volume Statistics:', {
+          //   max: `${(maxVolume / 1000000).toFixed(1)}M`,
+          //   min: `${(minVolume / 1000000).toFixed(1)}M`,
+          //   avg: `${(avgVolume / 1000000).toFixed(1)}M`,
+          //   cap95: `${(capVolume / 1000000).toFixed(1)}M`,
+          //   samples: volumes.length
+          // });
+          // 
+          // volumeData = ohlcvData.map((item: any) => {
+          //   const isUpDay = item.close >= item.open;
+          //   const volumeRatio = item.volume / avgVolume;
+          //   
+          //   let color;
+          //   if (volumeRatio > 1.5) color = isUpDay ? 'rgba(38, 166, 154, 0.8)' : 'rgba(239, 83, 80, 0.8)';
+          //   else if (volumeRatio > 0.7) color = isUpDay ? 'rgba(38, 166, 154, 0.6)' : 'rgba(239, 83, 80, 0.6)';
+          //   else color = isUpDay ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)';
+          //   
+          //   const renderValue = Math.min(item.volume, capVolume);
+          //   return { time: item.time, value: renderValue, color };
+          // });
         } else {
           const generateCandleData = (time: string, basePrice: number, index: number) => {
             const seed = index * 12345;
@@ -319,52 +318,74 @@ function App() {
           
           candlestickData = fallbackData;
           
-          const fallbackVolumes = fallbackData.map(candle => candle.volume);
-          const avgFallbackVolume = fallbackVolumes.reduce((sum, vol) => sum + vol, 0) / fallbackVolumes.length;
-          const capFallback = percentile(fallbackVolumes, 0.95);
-          
-          volumeData = fallbackData.map(candle => {
-            const isUpDay = candle.close >= candle.open;
-            const volumeRatio = candle.volume / avgFallbackVolume;
-            let color;
-            if (volumeRatio > 1.5) color = isUpDay ? 'rgba(38, 166, 154, 0.8)' : 'rgba(239, 83, 80, 0.8)';
-            else if (volumeRatio > 0.7) color = isUpDay ? 'rgba(38, 166, 154, 0.6)' : 'rgba(239, 83, 80, 0.6)';
-            else color = isUpDay ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)';
-            const renderValue = Math.min(candle.volume, capFallback);
-            return { time: candle.time, value: renderValue, color };
-          });
+          // Fallback volume processing disabled
+          // const fallbackVolumes = fallbackData.map(candle => candle.volume);
+          // const avgFallbackVolume = fallbackVolumes.reduce((sum, vol) => sum + vol, 0) / fallbackVolumes.length;
+          // const capFallback = percentile(fallbackVolumes, 0.95);
+          // 
+          // volumeData = fallbackData.map(candle => {
+          //   const isUpDay = candle.close >= candle.open;
+          //   const volumeRatio = candle.volume / avgFallbackVolume;
+          //   let color;
+          //   if (volumeRatio > 1.5) color = isUpDay ? 'rgba(38, 166, 154, 0.8)' : 'rgba(239, 83, 80, 0.8)';
+          //   else if (volumeRatio > 0.7) color = isUpDay ? 'rgba(38, 166, 154, 0.6)' : 'rgba(239, 83, 80, 0.6)';
+          //   else color = isUpDay ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)';
+          //   const renderValue = Math.min(candle.volume, capFallback);
+          //   return { time: candle.time, value: renderValue, color };
+          // });
         }
 
-        // Set candlestick and volume data
+        // Set candlestick data only (volume disabled)
         candlestickSeries.current.setData(candlestickData);
-        volumeSeries.current.setData(volumeData);
-        volumeSeries.current.applyOptions({ visible: showVolume });
+        // volumeSeries.current.setData(volumeData);
+        // volumeSeries.current.applyOptions({ visible: showVolume });
         
         // Add phantom future data points to extend the time scale to 2027
+        // Create invisible time extension series to force chart to show future dates
+        console.log('⏰ Creating time extension series for future option expiries...');
+        timeExtensionSeriesRef.current = chart.current.addLineSeries({
+          color: 'transparent',
+          lineWidth: 0,
+          crosshairMarkerVisible: false,
+          lastValueVisible: false,
+          priceLineVisible: false,
+          visible: false, // Completely invisible
+          priceScaleId: 'timeExtension'
+        });
+
+        // Hide the time extension price scale
+        chart.current.priceScale('timeExtension').applyOptions({
+          visible: false,
+        });
+
         // This ensures options with future expiry dates display correctly
         const lastDataPoint = candlestickData[candlestickData.length - 1];
-        if (lastDataPoint && optionsSeries.current) {
+        if (lastDataPoint && timeExtensionSeriesRef.current) {
           const lastDate = new Date(lastDataPoint.time);
           const phantomPoints = [];
           
-          // Add monthly phantom points from last data to end of 2027
+          console.log('📅 Last data point:', lastDataPoint.time);
+          
+          // Add daily phantom points from last data point to end of 2027
           let currentDate = new Date(lastDate);
-          currentDate.setDate(1); // Start of next month
-          currentDate.setMonth(currentDate.getMonth() + 1);
+          currentDate.setDate(currentDate.getDate() + 1); // Start from next day
           
           const endDate = new Date('2027-12-31');
           
           while (currentDate <= endDate) {
             phantomPoints.push({
               time: currentDate.toISOString().split('T')[0],
-              value: 0, // Invisible data point for time scale extension only
+              value: lastDataPoint.close, // Use last known price to maintain scale
             });
-            currentDate.setMonth(currentDate.getMonth() + 1);
+            // Add points every week for performance
+            currentDate.setDate(currentDate.getDate() + 7);
           }
           
-          // Set phantom data on hidden options series to extend time scale
+          console.log('👻 Creating', phantomPoints.length, 'phantom points to extend time scale to', endDate.toISOString().split('T')[0]);
+          
+          // Set phantom data on invisible series to extend time scale
           if (phantomPoints.length > 0) {
-            optionsSeries.current.setData(phantomPoints);
+            timeExtensionSeriesRef.current.setData(phantomPoints);
           }
         }
         
@@ -402,10 +423,45 @@ function App() {
       window.addEventListener('resize', handleResize);
 
       return () => {
+        console.log('🧹 Cleaning up chart and event listeners...');
         window.removeEventListener('resize', handleResize);
-        if (chart.current) chart.current.remove();
+        
+        // Ensure proper cleanup of chart instance
+        if (chart.current) {
+          try {
+            chart.current.remove();
+            chart.current = null;
+          } catch (error) {
+            console.warn('⚠️ Error cleaning up chart:', error);
+          }
+        }
+        
+        // Clean up option visualization series
+        strikeLinesRef.current.forEach(line => {
+          try {
+            if (chart.current) chart.current.removeSeries(line);
+          } catch (e) {
+            console.warn('Could not remove strike line during cleanup:', e);
+          }
+        });
+        strikeLinesRef.current = [];
+        
+        // Payoff series cleanup removed
+        
+        if (timeExtensionSeriesRef.current) {
+          try {
+            if (chart.current) chart.current.removeSeries(timeExtensionSeriesRef.current);
+            timeExtensionSeriesRef.current = null;
+          } catch (e) {
+            console.warn('Could not remove time extension series during cleanup:', e);
+          }
+        }
+        
+        // Clean up series references
+        candlestickSeries.current = null;
+        // volumeSeries.current = null;
       };
-  }, [showVolume]);
+  }, []);
 
   useEffect(() => {
     // Load options from localStorage on startup
@@ -423,6 +479,14 @@ function App() {
     }
   }, []);
 
+  // Re-render options when options array changes
+  useEffect(() => {
+    if (options.length > 0) {
+      console.log('🔄 Re-rendering options due to options change');
+      renderOptionsOnChart(options);
+    }
+  }, [options]);
+
 
 
   const saveOptionsToStorage = (newOptions: Option[]) => {
@@ -432,103 +496,130 @@ function App() {
   const renderOptionsOnChart = (optionsData: Option[]) => {
     console.log('🎯 renderOptionsOnChart called with', optionsData.length, 'options');
     
-    if (!chart.current || !optionsSeries.current) {
-      console.error('❌ Chart or options series not available');
+    if (!chart.current || !candlestickSeries.current) {
+      console.error('❌ Chart or candlestick series not available');
       return;
     }
 
-    // Build phantom points to ensure time scale up to 2027
-    let combinedData: any[] = [];
-    try {
-      // Use known last data point since candlestickSeries.data() might not be available yet
-      const lastDataPoint = { time: '2025-08-17' }; // We know this from the OHLCV data
-      console.log('📊 Using known last candlestick data point:', lastDataPoint);
-      
-      const lastDate = new Date(lastDataPoint.time);
-      const endDate = new Date('2027-12-31');
-      let currentDate = new Date(lastDate);
-      currentDate.setDate(1);
-      currentDate.setMonth(currentDate.getMonth() + 1);
-      
-      console.log('👻 Creating phantom points from', currentDate.toISOString().split('T')[0], 'to 2027-12-31');
-      
-      while (currentDate <= endDate) {
-        const timeStr = currentDate.toISOString().split('T')[0];
-        combinedData.push({ time: timeStr, value: 0 });
-        currentDate.setMonth(currentDate.getMonth() + 1);
+    // Clear existing option visualizations first
+    console.log('🧹 Clearing existing option visualizations...');
+    strikeLinesRef.current.forEach(line => {
+      try {
+        chart.current.removeSeries(line);
+      } catch (e) {
+        console.warn('Could not remove existing visualization:', e);
       }
-      console.log('👻 Created', combinedData.length, 'phantom points');
-    } catch (error) {
-      console.error('Error preparing phantom points for options series:', error);
-    }
-
-    // Add real option anchor points so markers have exact times in this series
-    console.log('📍 Adding option anchor points...');
-    for (const option of optionsData) {
-      const anchorPoint = { time: option.expiry_date, value: option.strike_price };
-      combinedData.push(anchorPoint);
-      console.log('📍 Added option anchor:', option.expiry_date, 'strike:', option.strike_price);
-    }
-
-    // Sort by time to keep series data ordered
-    combinedData.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
-    console.log('📋 Total combined data points:', combinedData.length);
-
-    // Prepare markers (placed on the options series)
-    console.log('🎨 Creating markers...');
-    const markers: any[] = optionsData.map((option) => {
-      let color = '#ff9800';
-      if (option.size >= 2000000 && option.size < 5000000) color = '#ff8c00';
-      else if (option.size >= 5000000) color = '#ff6600';
-
-      let markerSize = 'small';
-      if (option.size >= 2000000 && option.size < 5000000) markerSize = 'medium';
-      else if (option.size >= 5000000) markerSize = 'large';
-
-      const marker = {
-        time: option.expiry_date,
-        position: 'inBar',
-        color,
-        shape: 'circle',
-        size: markerSize,
-        text: `${option.option_type.toUpperCase()} ${(option.size / 1000000).toFixed(1)}M @ $${option.strike_price}`,
-      };
-      
-      console.log('🎨 Created marker for', option.expiry_date, 'color:', color, 'size:', markerSize);
-      return marker;
     });
+    strikeLinesRef.current = [];
 
-    try {
-      console.log('⚙️ Setting data on options series...');
-      optionsSeries.current.setData(combinedData);
-      
-      console.log('⚙️ Setting markers on options series...');
-      optionsSeries.current.setMarkers(markers);
-      
-      console.log('✅ Successfully set', combinedData.length, 'data points and', markers.length, 'markers');
-    } catch (error) {
-      console.error('❌ Error setting options series data/markers:', error);
+    if (optionsData.length === 0) {
+      // Clear markers when no options
+      candlestickSeries.current.setMarkers([]);
+      return;
     }
+
+    // Extend time scale to show future expiry dates
+    const furthestExpiry = optionsData.reduce((latest, option) => {
+      return option.expiry_date > latest ? option.expiry_date : latest;
+    }, optionsData[0].expiry_date);
+    
+    console.log('📅 Furthest option expiry:', furthestExpiry);
+    
+    // TECHNIQUE 1: Strike Price Circles on Expiry Dates (always show options)
+    if (optionsData.length > 0) {
+      console.log('🟠 Creating orange strike price circles on expiry dates...');
+      
+      optionsData.forEach((option, index) => {
+        try {
+          // Create a line series with just one point to show a circle at the strike price on expiry date
+          const strikeSeries = chart.current.addLineSeries({
+            color: '#ff9500', // Orange color for all strike points
+            lineWidth: 0, // No line, just the point
+            crosshairMarkerVisible: true,
+            lastValueVisible: false,
+            priceLineVisible: false,
+            pointMarkersVisible: true,
+            title: `${option.option_type.toUpperCase()} Strike $${option.strike_price.toFixed(4)} (${option.expiry_date})`
+          });
+          
+          // Create a single data point at the expiry date and strike price
+          const strikeData = [{
+            time: option.expiry_date,
+            value: option.strike_price
+          }];
+          
+          strikeSeries.setData(strikeData);
+          strikeLinesRef.current.push(strikeSeries);
+          
+          console.log(`🟠 Added orange circle for ${option.option_type} at $${option.strike_price} expiring ${option.expiry_date}`);
+          
+        } catch (error) {
+          console.warn('⚠️ Could not add strike price circle:', option, error);
+        }
+      });
+    }
+
+    // Clear any existing markers since we're using orange circles now
+    candlestickSeries.current.setMarkers([]);
+    
+    // TECHNIQUE 2: Extend visible range intelligently to show future expiries
+    try {
+      const timeScale = chart.current.timeScale();
+      
+      // Calculate optimal range that shows both data and options
+      const dataStart = '2023-01-01'; // Fixed start
+      const optionEnd = new Date(furthestExpiry);
+      optionEnd.setMonth(optionEnd.getMonth() + 3); // Add 3 months buffer past furthest expiry
+      
+      const targetEndDate = optionEnd.toISOString().split('T')[0];
+      
+      console.log('📅 Setting visible range to show option expiry:', furthestExpiry);
+      console.log('📅 Extending view to:', targetEndDate);
+      
+      // Force the time scale to show the extended range
+      timeScale.setVisibleRange({
+        from: dataStart,
+        to: targetEndDate
+      });
+      
+      // Also adjust the right offset to ensure future dates are visible
+      timeScale.applyOptions({
+        rightOffset: 100, // Increase right offset to make room for future dates
+        fixLeftEdge: false,
+        fixRightEdge: false
+      });
+      
+      console.log('✅ Extended time range to show all option expiries until', targetEndDate);
+    } catch (error) {
+      console.warn('⚠️ Could not extend time scale:', error);
+    }
+    
+    // Payoff visualization removed for simplicity
+    
+    console.log('✅ Option visualization complete:', {
+      'Orange Strike Circles': strikeLinesRef.current.length
+    });
   };
 
   const handleAddOption = (optionData: Omit<Option, 'id' | 'created_at'>) => {
     console.log('➕ handleAddOption called with:', optionData);
     
     try {
-      // Validate future dates - current data goes to August 17, 2025
+      // Validate future dates - must be after today
       const expiryDate = new Date(optionData.expiry_date);
-      const currentDate = new Date('2025-08-17');
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0); // Set to start of day for fair comparison
       
-      console.log('📅 Validating expiry date:', optionData.expiry_date, 'vs current:', '2025-08-17');
+      console.log('📅 Validating expiry date:', optionData.expiry_date, 'vs current:', currentDate.toISOString().split('T')[0]);
       
       if (expiryDate <= currentDate) {
-        console.warn('⚠️ Invalid expiry date - too early');
-        alert('Expiry date must be in the future (after August 17, 2025)');
+        console.warn('⚠️ Invalid expiry date - must be in the future');
+        alert('Expiry date must be in the future');
         return;
       }
       
-      // Create new option with generated ID
-      const optionId = Date.now();
+      // Create new option with generated ID using crypto.randomUUID for better uniqueness
+      const optionId = Date.now() + Math.floor(Math.random() * 1000); // More robust ID generation
       const newOption: Option = {
         ...optionData,
         id: optionId, // Ensure ID is always set
@@ -555,13 +646,8 @@ function App() {
     }
   };
 
-  const handleDeleteOption = (optionId: number | undefined) => {
+  const handleDeleteOption = (optionId: number) => {
     console.log('🗑️ handleDeleteOption called with ID:', optionId);
-    
-    if (!optionId) {
-      console.error('❌ Cannot delete option: ID is undefined');
-      return;
-    }
     
     console.log('📋 Current options before delete:', options.length);
     const updatedOptions = options.filter(option => option.id !== optionId);
@@ -606,23 +692,16 @@ function App() {
     console.log('✅ All options cleared successfully');
   };
 
-  const toggleChartType = () => {
-    if (!chart.current || !candlestickSeries.current) return;
-    
-    const newType = chartType === 'candlestick' ? 'line' : 'candlestick';
-    setChartType(newType);
-    
-    // For now, we'll keep the candlestick series and just change visual style
-    // In a full implementation, you would switch between series types
-  };
+  // Chart type toggle removed for simplicity
 
-  const toggleVolume = () => {
-    const newShowVolume = !showVolume;
-    setShowVolume(newShowVolume);
-    if (chart.current && volumeSeries.current) {
-      volumeSeries.current.applyOptions({ visible: newShowVolume });
-    }
-  };
+  // Volume toggle disabled
+  // const toggleVolume = () => {
+  //   const newShowVolume = !showVolume;
+  //   setShowVolume(newShowVolume);
+  //   if (chart.current && volumeSeries.current) {
+  //     volumeSeries.current.applyOptions({ visible: newShowVolume });
+  //   }
+  // };
 
   const resetChart = () => {
     if (chart.current) {
@@ -653,43 +732,12 @@ function App() {
         <div className="toolbar-left">
           <div className="chart-controls">
             <button 
-              className={`control-btn ${chartType === 'candlestick' ? 'active' : ''}`}
-              onClick={toggleChartType}
-              title="Toggle Chart Type"
-            >
-              Chart
-            </button>
-            <button 
-              className={`control-btn ${showVolume ? 'active' : ''}`}
-              onClick={toggleVolume}
-              title="Toggle Volume"
-            >
-              Volume
-            </button>
-            <button 
               className="control-btn"
               onClick={resetChart}
-              title="Reset Zoom"
+              title="Reset Chart View"
             >
-              Reset
+              🔄 Reset View
             </button>
-          </div>
-        </div>
-        <div className="toolbar-right">
-          <div className="data-source-indicator">
-            {dataSource === 'loading' && <span className="status loading">⏳ Loading...</span>}
-            {dataSource === 'api' && <span className="status api">📊 Historical Data</span>}
-            {dataSource === 'fallback' && <span className="status fallback">⚠️ Demo Data</span>}
-          </div>
-          <div className="legend-info">
-            <div className="legend-item-inline">
-              <span className="legend-dot call"></span>
-              <span>Calls</span>
-            </div>
-            <div className="legend-item-inline">
-              <span className="legend-dot put"></span>
-              <span>Puts</span>
-            </div>
           </div>
         </div>
       </div>
@@ -703,24 +751,24 @@ function App() {
             <div className="summary-stats">
               <div className="stat-item">
                 <span className="stat-label">Total Options</span>
-                <span className="stat-value">{options.length}</span>
+                <span className="stat-value">{optionStats.totalOptions}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">Total Size</span>
                 <span className="stat-value">
-                  {(options.reduce((sum, opt) => sum + opt.size, 0) / 1000000).toFixed(1)}M
+                  {optionStats.totalSize}M
                 </span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">Calls</span>
                 <span className="stat-value call">
-                  {options.filter(opt => opt.option_type === 'call').length}
+                  {optionStats.callCount}
                 </span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">Puts</span>
                 <span className="stat-value put">
-                  {options.filter(opt => opt.option_type === 'put').length}
+                  {optionStats.putCount}
                 </span>
               </div>
             </div>
@@ -747,7 +795,7 @@ function App() {
                 <p>Click "Add Option" to start visualizing your options portfolio</p>
               </div>
             ) : (
-              options.filter(option => option.id).map((option) => {
+              options.map((option) => {
               // Determine size category for styling
               let sizeClass = 'size-small';
               if (option.size >= 2000000 && option.size < 5000000) {
